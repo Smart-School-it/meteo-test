@@ -1,0 +1,7 @@
+{
+  "name": "MeteoGemini",
+  "description": "Un'applicazione meteo intelligente che utilizza l'IA di Gemini per fornire previsioni in tempo reale, consigli personalizzati e approfondimenti climatici per qualsiasi città del mondo.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
