@@ -3,13 +3,15 @@ import { GoogleGenAI } from "@google/genai";
 import { WeatherData, GroundingSource } from "../types";
 
 export class GeminiWeatherService {
-  private ai: GoogleGenAI;
-
-  constructor() {
-    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  private getAIInstance() {
+    const apiKey = process.env.API_KEY;
+    if (!apiKey || apiKey === 'undefined') {
+      throw new Error("Chiave API non configurata. Imposta API_KEY nelle variabili d'ambiente di Vercel.");
+    }
+    return new GoogleGenAI({ apiKey });
   }
 
-  async fetchWeather(city: string, location?: { lat: number; lng: number }): Promise<WeatherData> {
+  async fetchWeather(city: string): Promise<WeatherData> {
     const prompt = `Fornisci un report meteo dettagliato per la città di "${city}". 
     Il report deve includere:
     1. Condizioni attuali (Temperatura reale e percepita, Umidità, Vento, Visibilità).
@@ -20,19 +22,14 @@ export class GeminiWeatherService {
     
     Formatta la risposta in Markdown elegante, usando emoji e tabelle dove opportuno per la chiarezza.`;
 
-    const config: any = {
-      tools: [{ googleSearch: {} }],
-    };
-
-    if (location) {
-        // Option to add location context if needed, though search grounding usually handles text-based city queries well.
-    }
-
     try {
-      const response = await this.ai.models.generateContent({
+      const ai = this.getAIInstance();
+      const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: prompt,
-        config: config,
+        config: {
+          tools: [{ googleSearch: {} }],
+        },
       });
 
       const text = response.text || "Nessun dato ricevuto.";
@@ -49,9 +46,12 @@ export class GeminiWeatherService {
         sources,
         timestamp: new Date().toLocaleTimeString(),
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Gemini API Error:", error);
-      throw new Error("Impossibile recuperare i dati meteo. Riprova più tardi.");
+      if (error.message?.includes("API_KEY")) {
+        throw error;
+      }
+      throw new Error("Errore durante il recupero dei dati. Verifica la tua chiave API.");
     }
   }
 }
